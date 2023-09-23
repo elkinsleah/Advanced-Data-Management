@@ -1,0 +1,90 @@
+-- Section B
+
+CREATE TABLE detailed_table (
+	customer_id int,
+	first_name varchar(50),
+	last_name varchar(50),
+	email varchar(50),
+	rental_id int,
+	rental_date timestamp,
+	return_date timestamp,
+	staff_id int
+);
+
+-- SELECT * FROM detailed_table;
+
+CREATE TABLE summary_table (
+	customer_name varchar(100),
+	email varchar(50),
+	customer_amount int
+);
+
+-- SELECT * FROM summary_table;
+
+-- Section C 
+
+INSERT INTO detailed_table 
+
+SELECT 
+	customer.customer_id, customer.first_name, customer.last_name, customer.email,
+	rental.rental_id, rental.rental_date, rental.return_date, rental.staff_id
+FROM rental
+INNER JOIN customer ON customer.customer_id = rental.customer_id;
+
+-- SELECT * FROM detailed_table;
+
+-- Section D
+
+CREATE FUNCTION update_summary_function()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN 
+
+DELETE FROM summary_table;
+
+INSERT INTO summary_table (
+SELECT
+concat_ws (', ', last_name, first_name) AS customer_name,
+email, 
+		COUNT(customer_id)
+FROM detailed_table
+GROUP BY customer_id, customer_name, email
+ORDER BY count(customer_id) DESC
+LIMIT 50 
+);
+
+RETURN NEW;
+END; $$
+
+-- Section E
+
+CREATE TRIGGER update_summary_table 
+AFTER INSERT ON detailed_table 
+FOR EACH STATEMENT 
+EXECUTE PROCEDURE update_summary_function();
+
+-- Section F
+
+CREATE PROCEDURE update_report()
+LANGUAGE plpgsql
+AS $$
+BEGIN 
+
+DELETE FROM detailed_table;
+
+INSERT INTO detailed_table 
+
+SELECT 
+	customer.customer_id, customer.first_name, customer.last_name, customer.email,
+	rental.rental_id, rental.rental_date, rental.return_date, rental.staff_id
+FROM rental 
+INNER JOIN customer ON customer.customer_id = rental.customer_id;
+
+END; $$
+
+-- CALL update_report();
+
+-- SELECT * FROM detailed_table;
+
+-- SELECT * FROM summary_table;
